@@ -1,1 +1,1 @@
-# GoodweReaderDesktop
+# GoodweCOmmunicatorDesktop
