@@ -1,0 +1,10 @@
+﻿{
+    "profiles": {
+      "GoodweReaderDesktop (Package)": {
+        "commandName": "MsixPackage"
+      },
+      "GoodweReaderDesktop (Unpackaged)": {
+        "commandName": "Project"
+      }
+    }
+}
