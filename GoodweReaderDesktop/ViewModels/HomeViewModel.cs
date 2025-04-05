@@ -6,7 +6,7 @@ using GoodweReaderDesktop.Services;
 namespace GoodweReaderDesktop.ViewModels;
 
 
-public partial class HomeViewModel : ObservableRecipient
+public partial class HomeViewModel : ObservableObject
 {
     private readonly GoodweService _goodweService;
 
