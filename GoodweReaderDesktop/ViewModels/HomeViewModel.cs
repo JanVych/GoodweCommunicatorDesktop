@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using GoodweReaderDesktop.Helpers;
 using GoodweReaderDesktop.Services;
+using Microsoft.UI.Dispatching;
 
 namespace GoodweReaderDesktop.ViewModels;
 
@@ -9,18 +10,34 @@ namespace GoodweReaderDesktop.ViewModels;
 public partial class HomeViewModel : ObservableObject
 {
     private readonly GoodweService _goodweService;
+    private DispatcherQueue? _dispatcherQueue;
 
     [ObservableProperty]
-    public int _readRegisterValue;
+    public double _readRegisterValue;
 
     [ObservableProperty]
-    public int _readRegisterAddress;
+    public ushort _readRegisterAddress;
 
     [ObservableProperty]
-    public int _writeRegisterValue;
+    public double _writeRegisterValue;
 
     [ObservableProperty]
-    public int _writeRegisterAddress;
+    public ushort _writeRegisterAddress;
+
+    [ObservableProperty]
+    public string _ipAddress = string.Empty;
+
+    [ObservableProperty]
+    public int _port;
+
+    [ObservableProperty]
+    public byte _deviceAddress;
+
+    [ObservableProperty]
+    public bool _isInputEnabled = true;
+
+    [ObservableProperty]
+    public string _outputText = string.Empty;
 
     public List<RegisterType> RegisterTypesList { get; set; } = Enum.GetValues(typeof(RegisterType)).Cast<RegisterType>().ToList();
 
@@ -32,34 +49,67 @@ public partial class HomeViewModel : ObservableObject
     public HomeViewModel(GoodweService goodweService)
     {
         _goodweService = goodweService;
+        _goodweService.LogAction = WriteLineConsole;
+    }
+
+    public void SetDispatcherQueue(DispatcherQueue dispatcherQueue)
+    {
+        _dispatcherQueue = dispatcherQueue;
     }
 
     [RelayCommand]
-    public void ReadRegister()
+    public async Task ReadRegister()
     {
-        // Implement the logic to read the register value here
-        // For example, you can use a service to communicate with the device
-        // and update the ReadRegisterValue property accordingly.
-        // This is just a placeholder implementation.
-        ReadRegisterValue = 1234; // Replace with actual read value
+        WriteLineConsole($"Reading at: {ReadRegisterAddress}...");
+        IsInputEnabled = false;
+        _goodweService.ChangeSettings(DeviceAddress, IpAddress, Port);
+        var task = Task.Run(() =>
+        {
+            ReadRegisterValue = ReadRegisterType switch
+            {
+                RegisterType.SignedInt16 => _goodweService.GetS16Register(ReadRegisterAddress) ?? 0,
+                RegisterType.UnsignedInt16 => _goodweService.GetU16Register(ReadRegisterAddress) ?? 0,
+                RegisterType.SignedInt32 => _goodweService.GetS32Register(ReadRegisterAddress) ?? 0,
+                RegisterType.UnsignedInt32 => _goodweService.GetU32Register(ReadRegisterAddress) ?? 0,
+                _ => 0 
+            };
+        });
+        await task;
+        IsInputEnabled = true;
     }
 
     [RelayCommand]
-    public void WriteRegister()
+    public async Task WriteRegister()
     {
-        // Implement the logic to write the register value here
-        // For example, you can use a service to communicate with the device
-        // and update the WriteRegisterValue property accordingly.
-        // This is just a placeholder implementation.
-        // Replace with actual write logic
+        WriteLineConsole($"Writing at: {WriteRegisterAddress}, value: {WriteRegisterValue}...");
+        _goodweService.ChangeSettings(DeviceAddress, IpAddress, Port);
+        IsInputEnabled = false;
+        var task = Task.Run(() =>
+        {
+            switch (WriteRegisterType)
+            {
+                case RegisterType.SignedInt16:
+                    _goodweService.SetS16Register(WriteRegisterAddress, (short)WriteRegisterValue);
+                    break;
+                case RegisterType.UnsignedInt16:
+                    _goodweService.SetU16Register(WriteRegisterAddress, (ushort)WriteRegisterValue);
+                    break;
+                default:
+                    break;
+            }
+        });
+        await task;
+        IsInputEnabled = true;
     }
 
-    [RelayCommand]
-    public void Connect()
+    public void WriteLineConsole(string text)
     {
-        // Implement the logic to connect to the device here
-        // For example, you can use a service to establish a connection
-        // and update the connection status accordingly.
-        // This is just a placeholder implementation.
+        if(_dispatcherQueue != null)
+        {
+            _dispatcherQueue.TryEnqueue(() =>
+            {
+                OutputText += $"{text}\n";
+            });
+        }
     }
 }

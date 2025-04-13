@@ -1,5 +1,4 @@
 ﻿using ModulesApp.Helpers;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GoodweReaderDesktop.Services;
 
@@ -25,17 +24,41 @@ public class GoodweService
         All = 0x7F,
     }
 
-    [NotMapped]
     private readonly ModbusRtuUdp _modbusRtuUdp = new(0xF7, 8899, "192.168.0.240", 2);
 
+    public Action<string>? LogAction { get; set; } = null;
 
-    public uint? GetPV1Power() => _modbusRtuUdp.ReadU32Register(35105);
+    public GoodweService()
+    {
+        _modbusRtuUdp.LogAction = Log;
+    }
+
+    public void Log(string message)
+    {
+        LogAction?.Invoke(message);
+    }
+
+    public void ChangeSettings(byte deviceAddress, string ipAddress, int port)
+    {
+        _modbusRtuUdp.IpAddress = ipAddress;
+        _modbusRtuUdp.Port = port;
+        _modbusRtuUdp.DeviceAddress = deviceAddress;
+    }
+
+    public uint? GetU32Register(ushort address) => _modbusRtuUdp.ReadU32Register(address);
+    public ushort? GetU16Register(ushort address) => _modbusRtuUdp.ReadU16Register(address);
+    public short? GetS16Register(ushort address) => _modbusRtuUdp.ReadS16Register(address);
+    public int? GetS32Register(ushort address) => _modbusRtuUdp.ReadS32Register(address);
+
+    public void SetU16Register(ushort address, ushort value) => _modbusRtuUdp.WriteU16Register(address, value);
+    public void SetS16Register(ushort address, short value) => _modbusRtuUdp.WriteS16Register(address, value);
+
 
     /// <summary>
     ///  Get Grid Power in wats
     /// </summary>
     /// <returns>negative value = consuming, positive value = suplying</returns>
-    public int? GetGridPower() => (int?)_modbusRtuUdp.ReadU32Register(35139);
+    public int? GetGridPower() => _modbusRtuUdp.ReadS32Register(35139);
     public uint? GetBackupPower() => _modbusRtuUdp.ReadU32Register(35169);
     public uint? GetLoadPower() => _modbusRtuUdp.ReadU32Register(35171);
     public uint? GetBatteryPower() => _modbusRtuUdp.ReadU32Register(35182);

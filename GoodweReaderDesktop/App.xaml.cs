@@ -2,7 +2,6 @@
 using GoodweReaderDesktop.Contracts.Services;
 using GoodweReaderDesktop.Core.Contracts.Services;
 using GoodweReaderDesktop.Core.Services;
-using GoodweReaderDesktop.Helpers;
 using GoodweReaderDesktop.Models;
 using GoodweReaderDesktop.Services;
 using GoodweReaderDesktop.ViewModels;

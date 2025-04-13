@@ -8,11 +8,12 @@
 
     <Page.Resources>
         <helpers:RegisterTypeToStringConverter x:Key="RegisterTypeConverter" />
+        <helpers:BooleanNegationConverter x:Key="BooleanNegationConverter" />
     </Page.Resources>
 
     <Grid x:Name="ContentArea"
           RowSpacing="20"
-          ColumnDefinitions="*"
+          ColumnDefinitions="*, *"
           RowDefinitions="auto, auto, auto">
         
         <StackPanel Grid.Column="0"
@@ -29,30 +30,46 @@
                            VerticalAlignment="Center"
                            TextAlignment="Center"
                            Style="{StaticResource TitleTextBlockStyle}" />
-                <Button Grid.Column="1"
+
+                <ProgressRing IsActive="{x:Bind ViewModel.IsInputEnabled, Converter={StaticResource BooleanNegationConverter}, Mode=OneWay}"
+                              Grid.Column="1"
+                              Width="50"
+                              Height="50"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"/>
+                <!--<Button Grid.Column="1"
                         VerticalAlignment="Center"
                         Height="60"
                         Content="Connect"
                         HorizontalAlignment="Right"
                         Command="{x:Bind ViewModel.ConnectCommand}">
-                    <!--<FontIcon Glyph="&#xE725;"
-                              FontSize="24" />-->
-                </Button>
+                </Button>-->
             </Grid>
-            <Grid ColumnDefinitions="2*, 1*"
+            <Grid ColumnDefinitions="2*, 1*, 1*"
                   ColumnSpacing="24">
                 <TextBox Header="Ip address:"
-                         PlaceholderText="192.168.0.240"
                          Grid.Column="0"
                          VerticalAlignment="Center"
                          TextAlignment="Center"
-                         HorizontalAlignment="Stretch"/>
-                <TextBox Header="Port:"
-                         PlaceholderText="8899"
-                         Grid.Column="1"
-                         VerticalAlignment="Center"
-                         TextAlignment="Center"
-                         HorizontalAlignment="Stretch"/>
+                         HorizontalAlignment="Stretch"
+                         IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"
+                         Text="{x:Bind ViewModel.IpAddress, Mode=TwoWay}"/>
+                <NumberBox Header="Port:"
+                           Grid.Column="1"
+                           Maximum="65535"
+                           Minimum="0"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Stretch"
+                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"
+                           Value="{x:Bind ViewModel.Port, Mode=TwoWay}"/>
+                <NumberBox Header="Device Address:"
+                           Grid.Column="2"
+                           Maximum="255"
+                           Minimum="0"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Stretch"
+                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"
+                           Value="{x:Bind ViewModel.DeviceAddress, Mode=TwoWay}" />
             </Grid>
         </StackPanel>
         
@@ -75,7 +92,8 @@
                         HorizontalAlignment="Right"
                         Width="60"
                         Height="60"
-                        Command="{x:Bind ViewModel.ReadRegisterCommand}">
+                        Command="{x:Bind ViewModel.ReadRegisterCommand}"
+                        IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}">
                     <FontIcon Glyph="&#xE725;"
                               FontSize="24" />
                 </Button>
@@ -85,15 +103,16 @@
                 <NumberBox Grid.Column="0"
                            VerticalAlignment="Center"
                            Header="Address"
-                           Value="0"
-                           Maximum="65535"
-                           Minimum="0" />
-                <ComboBox Header="Type"
+                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"
+                           Value="{x:Bind ViewModel.ReadRegisterAddress, Mode=TwoWay}" />
+                <ComboBox x:Name="ReadRegisterType"
+                          Header="Type"
                           Grid.Column="1"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Stretch"
                           ItemsSource="{x:Bind ViewModel.RegisterTypesList}"
-                          SelectedItem="{x:Bind ViewModel.ReadRegisterType, Mode=TwoWay}">
+                          SelectedItem="{x:Bind ViewModel.ReadRegisterType, Mode=TwoWay}"
+                          IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Converter={StaticResource RegisterTypeConverter}}" />
@@ -103,16 +122,17 @@
             </Grid>
             <Grid ColumnDefinitions="*, *"
                   ColumnSpacing="20">
-                <NumberBox VerticalAlignment="Center"
+                <NumberBox x:Name="ReadRegisterValue"
+                           VerticalAlignment="Center"
                            Header="Value"
-                           Value="0"
-                           Maximum="65535"
-                           Minimum="0"
-                           IsEnabled="False" />
-                <TextBox Grid.Column="1"
+                           IsEnabled="False"
+                           ValueChanged="ReadRegisterValue_ValueChanged"
+                           Value="{x:Bind ViewModel.ReadRegisterValue, Mode=TwoWay}"/>
+                <TextBox x:Name="ReadRegisterValueHex"
+                         Grid.Column="1"
                          VerticalAlignment="Center"
                          Header="Hexadecimal value:"
-                         PlaceholderText="0" 
+                         PlaceholderText="0"
                          IsEnabled="False"/>
             </Grid>
         </StackPanel>
@@ -137,17 +157,36 @@
                         HorizontalAlignment="Right"
                         Width="60"
                         Height="60"
-                        Command="{x:Bind ViewModel.WriteRegisterCommand}">
+                        Command="{x:Bind ViewModel.WriteRegisterCommand}"
+                        IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}">
                     <FontIcon Glyph="&#xE725;"
                               FontSize="24" />
                 </Button>
             </Grid>
-            <NumberBox x:Name="WriteRegisterAddress"
-                       VerticalAlignment="Center"
-                       Header="Register address:"
-                       Value="0"
-                       Maximum="65535"
-                       Minimum="0"/>
+            <Grid ColumnDefinitions="3*, 2*"
+                  ColumnSpacing="20">
+                <NumberBox x:Name="WriteRegisterAddress"
+                           Grid.Column="0"
+                           VerticalAlignment="Center"
+                           Header="Register address:"
+                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"
+                           Value="{x:Bind ViewModel.WriteRegisterAddress, Mode=TwoWay}" />
+                <ComboBox x:Name="WriteRegisterType"
+                          Header="Type"
+                          Grid.Column="1"
+                          VerticalAlignment="Center"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="WriteRegisterType_SelectionChanged"
+                          ItemsSource="{x:Bind ViewModel.RegisterTypesList}"
+                          SelectedItem="{x:Bind ViewModel.WriteRegisterType, Mode=TwoWay}"
+                          IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource RegisterTypeConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
             <Grid ColumnDefinitions="*, *"
                   ColumnSpacing="24">
 
@@ -155,16 +194,31 @@
                            Grid.Column="0"
                            VerticalAlignment="Center"
                            Header="Register value:"
-                           Value="0"
-                           Maximum="65535"
-                           Minimum="0"/>
-                <TextBox x:Name="WriteRegisterVakueHex"
+                           ValueChanged="WriteRegisterValue_ValueChanged"
+                           IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}"
+                           Value="{x:Bind ViewModel.WriteRegisterValue, Mode=TwoWay}" />
+                <TextBox x:Name="WriteRegisterValueHex"
                          Grid.Column="1"
                          VerticalAlignment="Center"
                          Header="Register value hex:"
-                         PlaceholderText="0"/>
+                         PlaceholderText="0"
+                         TextChanged="WriteRegisterValueHex_TextChanged"
+                         IsEnabled="{x:Bind ViewModel.IsInputEnabled, Mode=OneWay}" />
             </Grid>
         </StackPanel>
-        
+
+        <Border  Grid.Column="1"
+                 Grid.RowSpan="3"
+                 Margin="20,0,20,0"
+                 MaxHeight="730"
+                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                 CornerRadius="{StaticResource OverlayCornerRadius}"
+                 Padding="24">
+            <ScrollView >
+                <TextBlock Text="{x:Bind ViewModel.OutputText, Mode=TwoWay}" Foreground="DarkOliveGreen"/>
+            </ScrollView>
+        </Border>
+
+
     </Grid>
 </Page>

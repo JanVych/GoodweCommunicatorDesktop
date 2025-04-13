@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Net;
+using System.Diagnostics;
 
 namespace ModulesApp.Helpers;
 
@@ -11,17 +12,17 @@ public class ModbusRtuUdp
         public CrcException(string message, Exception inner) : base(message, inner) { }
     }
 
-    private byte DeviceAddress
+    public byte DeviceAddress
     {
         get; set;
     }
 
-    public int ServerPort
+    public int Port
     {
         get; set;
     }
 
-    public string ServerIp
+    public string IpAddress
     {
         get; set;
     }
@@ -35,29 +36,36 @@ public class ModbusRtuUdp
 
     private UdpClient? _udpClient;
 
-    public ModbusRtuUdp(byte deviceAddress, int serverPort, string serverIp, int responseHeaderSize = 0)
+    public Action<string>? LogAction { get; set; } = null;
+
+    public ModbusRtuUdp(byte deviceAddress, int serverPort, string serverIp, int responseHeaderSize = 2)
     {
         DeviceAddress = deviceAddress;
-        ServerPort = serverPort;
-        ServerIp = serverIp;
+        Port = serverPort;
+        IpAddress = serverIp;
         ResponseHeaderSize = responseHeaderSize;
     }
 
     public float? ReadFLoatFromS16Register(ushort address)
     {
         var value = ReadS16Register(address);
-        return value == null ? null : (float)value;
+        return value;
     }
 
     public ushort? ReadU16Register(ushort address)
     {
         var value = ReadS16Registers(address, 1)?.FirstOrDefault();
-        return value == null ? null : (ushort)value;
+        return (ushort?)value;
     }
 
     public short? ReadS16Register(ushort address)
     {
         return ReadS16Registers(address, 1)?.FirstOrDefault();
+    }
+
+    public int? ReadS32Register(ushort address)
+    {
+        return (int?)ReadU32Register(address);
     }
 
     public uint? ReadU32Register(ushort address)
@@ -79,7 +87,7 @@ public class ModbusRtuUdp
             var frame = BuildFrame(0x03, address, ammount);
             var bytes = SendAndReceive(frame);
             var registers = new short[ammount];
-            for (int i = 0; i < ammount; i++)
+            for (var i = 0; i < ammount; i++)
             {
                 registers[i] = (short)(bytes[i * 2 + 3] << 8 | bytes[i * 2 + 4]);
             }
@@ -87,7 +95,7 @@ public class ModbusRtuUdp
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"ModbusRtuUdp, read registers: {ex.Message}\n");
+            LogAction?.Invoke($"ModbusRtuUdp, read registers: {ex.Message}");
             return null;
         }
     }
@@ -102,11 +110,11 @@ public class ModbusRtuUdp
         try
         {
             var frame = BuildFrame(0x06, address, registerValue);
-            byte[] response = SendAndReceive(frame);
+            var response = SendAndReceive(frame);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"ModbusRtuUdp, write register: {ex.Message}");
+            LogAction?.Invoke($"ModbusRtuUdp, write register: {ex.Message}");
         }
     }
 
@@ -119,7 +127,7 @@ public class ModbusRtuUdp
         frame[3] = (byte)address;
         frame[4] = (byte)(amountOrValue >> 8);
         frame[5] = (byte)amountOrValue;
-        ushort crc = CalculateCrc(frame, 6);
+        var crc = CalculateCrc(frame, 6);
         frame[6] = (byte)crc;
         frame[7] = (byte)(crc >> 8);
         return frame;
@@ -128,13 +136,13 @@ public class ModbusRtuUdp
     private byte[] SendAndReceive(byte[] data)
     {
         UdpClient client;
-        bool local = false;
+        var local = false;
         if (_udpClient == null)
         {
             local = true;
             client = new();
             client.Client.ReceiveTimeout = TimeoutMs;
-            client.Connect(ServerIp, ServerPort);
+            client.Connect(IpAddress, Port);
         }
         else
         {
@@ -144,9 +152,8 @@ public class ModbusRtuUdp
 
         if (bytes.Length == 5)
         {
-            Console.WriteLine($"Frame sended: {string.Join(", ", data)}");
-            Console.WriteLine($"Error frame recive: {string.Join(", ", bytes)}");
-            Console.WriteLine();
+            LogAction?.Invoke($"ModbusRtuUdp, error frame: {string.Join(", ", bytes)}");
+            LogAction?.Invoke($"Error frame recive: {string.Join(", ", bytes)}");
         }
 
         if (local)
@@ -159,12 +166,12 @@ public class ModbusRtuUdp
 
     private byte[] TrySendAndRecive(UdpClient client, byte[] data)
     {
-        for (int i = 1; i <= NumberofAttempts; i++)
+        for (var i = 1; i <= NumberofAttempts; i++)
         {
             try
             {
                 client.Send(data, data.Length);
-                IPEndPoint remoteEndPoint = new(IPAddress.Any, ServerPort);
+                IPEndPoint remoteEndPoint = new(IPAddress.Any, Port);
                 var bytes = client.Receive(ref remoteEndPoint);
                 if (ResponseHeaderSize > 0)
                 {
@@ -175,7 +182,8 @@ public class ModbusRtuUdp
             }
             catch (Exception)
             {
-                Console.WriteLine(i);
+
+                LogAction?.Invoke($"ModbusRtuUdp, send and receive: {i} attempt");
                 if (i == NumberofAttempts)
                 {
                     throw;
@@ -191,12 +199,12 @@ public class ModbusRtuUdp
         {
             _udpClient = new UdpClient();
             _udpClient.Client.ReceiveTimeout = TimeoutMs;
-            _udpClient.Connect(ServerIp, ServerPort);
+            _udpClient.Connect(IpAddress, Port);
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"ModbusRtuUdp, open: {ex.Message}\n");
+            LogAction?.Invoke($"ModbusRtuUdp, open: {ex.Message}");
             return false;
         }
     }
@@ -211,8 +219,8 @@ public class ModbusRtuUdp
     private static void CheckCrc(byte[] data)
     {
         //Console.WriteLine(string.Join(" ", data.Select(b => b.ToString("X2"))));
-        ushort crc = CalculateCrc(data, data.Length - 2);
-        ushort receivedCrc = (ushort)(data[^1] << 8 | data[^2]);
+        var crc = CalculateCrc(data, data.Length - 2);
+        var receivedCrc = (ushort)(data[^1] << 8 | data[^2]);
         if (!(crc == receivedCrc))
         {
             throw new CrcException("CRC check failed");
@@ -222,10 +230,10 @@ public class ModbusRtuUdp
     public static ushort CalculateCrc(byte[] data, int length)
     {
         ushort crc = 0xFFFF;
-        for (int i = 0; i < length; i++)
+        for (var i = 0; i < length; i++)
         {
             crc ^= data[i];
-            for (int j = 0; j < 8; j++)
+            for (var j = 0; j < 8; j++)
             {
                 if ((crc & 1) != 0)
                 {
