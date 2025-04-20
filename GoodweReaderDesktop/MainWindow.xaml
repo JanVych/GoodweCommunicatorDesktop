@@ -1,16 +1,17 @@
-﻿<windowex:WindowEx
-    x:Class="GoodweReaderDesktop.MainWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:GoodweReaderDesktop"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:windowex="using:WinUIEx"
-    MinWidth="1100"
-    MinHeight="820"
-    PersistenceId="MainWindow"
-    mc:Ignorable="d">
+﻿<windowex:WindowEx x:Class="GoodweReaderDesktop.MainWindow"
+                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                   xmlns:local="using:GoodweReaderDesktop"
+                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                   xmlns:windowex="using:WinUIEx"
+                   MinWidth="1100"
+                   MinHeight="820"
+                   Height="820"
+                   Width="1400"
+                   PersistenceId="MainWindow"
+                   mc:Ignorable="d">
     <Window.SystemBackdrop>
-        <MicaBackdrop/>
+        <MicaBackdrop />
     </Window.SystemBackdrop>
 </windowex:WindowEx>
