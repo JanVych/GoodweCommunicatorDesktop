@@ -153,7 +153,6 @@ public class ModbusRtuUdp
         if (bytes.Length == 5)
         {
             LogAction?.Invoke($"ModbusRtuUdp, error frame: {string.Join(", ", bytes)}");
-            LogAction?.Invoke($"Error frame recive: {string.Join(", ", bytes)}");
         }
 
         if (local)

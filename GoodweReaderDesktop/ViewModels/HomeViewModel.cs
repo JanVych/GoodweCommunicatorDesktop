@@ -25,13 +25,13 @@ public partial class HomeViewModel : ObservableObject
     public ushort _writeRegisterAddress;
 
     [ObservableProperty]
-    public string _ipAddress = string.Empty;
+    public string _ipAddress = "***REMOVED***";
 
     [ObservableProperty]
-    public int _port;
+    public int _port = 8899;
 
     [ObservableProperty]
-    public byte _deviceAddress;
+    public byte _deviceAddress = 0xF7;
 
     [ObservableProperty]
     public bool _isInputEnabled = true;
@@ -63,18 +63,19 @@ public partial class HomeViewModel : ObservableObject
         WriteLineConsole($"Reading at: {ReadRegisterAddress}...");
         IsInputEnabled = false;
         _goodweService.ChangeSettings(DeviceAddress, IpAddress, Port);
-        var task = Task.Run(() =>
+        double value = 0;
+        await Task.Run(() =>
         {
-            ReadRegisterValue = ReadRegisterType switch
+            value = ReadRegisterType switch
             {
                 RegisterType.SignedInt16 => _goodweService.GetS16Register(ReadRegisterAddress) ?? 0,
                 RegisterType.UnsignedInt16 => _goodweService.GetU16Register(ReadRegisterAddress) ?? 0,
                 RegisterType.SignedInt32 => _goodweService.GetS32Register(ReadRegisterAddress) ?? 0,
                 RegisterType.UnsignedInt32 => _goodweService.GetU32Register(ReadRegisterAddress) ?? 0,
-                _ => 0 
+                _ => 0
             };
         });
-        await task;
+        ReadRegisterValue = value;
         IsInputEnabled = true;
     }
 
@@ -104,7 +105,7 @@ public partial class HomeViewModel : ObservableObject
 
     public void WriteLineConsole(string text)
     {
-        if(_dispatcherQueue != null)
+        if (_dispatcherQueue != null)
         {
             _dispatcherQueue.TryEnqueue(() =>
             {
